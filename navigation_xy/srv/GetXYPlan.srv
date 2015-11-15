@@ -3,6 +3,10 @@ float64 start_y
 float64 goal_x
 float64 goal_y
 
+# x,y coordinates of each obstacle
+float64[] obs_x
+float64[] obs_y
+
 float64 egraph_eps
 float64 final_egraph_eps
 float64 dec_egraph_eps

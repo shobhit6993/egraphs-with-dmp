@@ -7,3 +7,5 @@
 */msg_gen
 navigation_xy/src/navigation_xy
 potential_field_dmp/src/potential_field_dmp
+navigation_xy_stats.csv
+xy_tests.yaml

@@ -111,8 +111,8 @@ visualization_msgs::MarkerArray EGraphXY::edgeToVisualizationMarker(vector<doubl
   marker.header.frame_id = "map";
   marker.type = visualization_msgs::Marker::LINE_LIST;
   marker.scale.x = 0.01;
-  marker.color.r = 1.0f;
-  marker.color.g = 0.0f;
+  marker.color.r = 0.0f;
+  marker.color.g = 1.0f;
   marker.color.b = 0.0f;
   marker.color.a = 1.0;
   geometry_msgs::Point p;

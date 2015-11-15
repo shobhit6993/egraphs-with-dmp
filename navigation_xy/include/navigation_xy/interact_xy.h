@@ -8,6 +8,8 @@
 #include <tf/transform_listener.h>
 #include <navigation_xy/GetXYPlan.h>
 
+const int kNumMarkers = 3;
+
 class ControlPlanner{
   public:
     void callPlanner();
