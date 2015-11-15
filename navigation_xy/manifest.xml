@@ -1,0 +1,18 @@
+<package>
+  <description brief="navigation_xy">
+
+     navigation_xy
+
+  </description>
+  <author>robotman0</author>
+  <maintainer>Shobhit Chaurasia</maintainer>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+
+  <depend package="costmap_2d"/>
+  <depend package="egraphs"/>
+  <depend package="egraph_vis"/>
+
+</package>
+
+

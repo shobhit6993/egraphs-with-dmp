@@ -1,0 +1,1 @@
+potential_field_dmp/Trajectory_1D[] traj

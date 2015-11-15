@@ -1,0 +1,6 @@
+<launch>
+  <node name="interact_xy" pkg="navigation_xy" type="interact_xy" output="screen" >
+    <rosparam file="$(find navigation_xy)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find navigation_xy)/config/global_costmap_params.yaml" command="load" />
+  </node>
+</launch>

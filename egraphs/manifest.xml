@@ -1,0 +1,21 @@
+<package>
+  <description brief="egraphs">
+
+     egraphs
+
+  </description>
+  <author>Michael Phillips</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/egraphs</url>
+  
+  <depend package="roscpp"/>
+  <!-- <depend package="sbpl"/> -->
+
+  <export>
+    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -legraphs"/>
+  </export>
+
+</package>
+
+

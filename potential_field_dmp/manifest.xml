@@ -1,0 +1,27 @@
+<package>
+    <description brief="potential_field_dmp">
+        Potential fields based implementation for online obstacle avoidance using
+        DMP framework
+
+        This library only includes the potential gradient term as described in [1].
+        The forcing function term is omitted. Hence, no training is required for DMP.
+
+        For a more complete DMP implementation (having forcing terms), refer [2]
+
+        [1]. Park, Dae-Hyung, Peter Pastor, and Stefan Schaal. "Movement reproduction and obstacle avoidance with dynamic movement primitives and potential fields." Humanoid Robots, 2008. Humanoids 2008. 8th IEEE-RAS International Conference on. IEEE, 2008.
+
+        [2]. https://github.com/sniekum/dmp
+
+    </description>
+    <author>Shobhit Chaurasia</author>
+    <license>BSD</license>
+
+    <depend package="roscpp"/>
+    <depend package="geometry_msgs"/>
+
+    <export>
+        <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -legraphs"/>
+    </export>
+</package>
+
+

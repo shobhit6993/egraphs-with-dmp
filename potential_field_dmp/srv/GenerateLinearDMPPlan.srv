@@ -1,0 +1,22 @@
+# n dim start state.
+float64[] start
+
+# n dim initial velocity. Timestep value ignored
+float64[] initial_velocity
+
+# n dim goal state.
+float64[] goal
+
+# n dim obstacle position.
+float64[] obs_pos
+
+# Speed of replay.
+float64 tau
+
+# time resolution for numerical intergration
+float64 dt
+
+---
+
+# the generated plan
+Plan generated_plan

@@ -1,0 +1,22 @@
+float64 start_x
+float64 start_y
+float64 goal_x
+float64 goal_y
+
+float64 egraph_eps
+float64 final_egraph_eps
+float64 dec_egraph_eps
+
+float64 initial_eps
+float64 final_eps
+float64 dec_eps
+
+bool feedback_path
+bool save_egraph
+bool use_egraph
+
+---
+
+geometry_msgs/PoseStamped[] path
+string[] stat_names
+float64[] stat_values
