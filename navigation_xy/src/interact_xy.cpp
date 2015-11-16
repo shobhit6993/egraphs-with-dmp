@@ -1,5 +1,7 @@
 #include <navigation_xy/interact_xy.h>
 #include <egraphs/egraph_stat_writer.h>
+#include <navigation_xy/constants.h>
+#include <nav_msgs/Path.h>
 
 enum MenuItems {PLAN = 1, PLAN_AND_FEEDBACK, PLAN_WITH_EGRAPHS, PLAN_WITH_EGRAPHS_AND_FEEDBACK, INTERRUPT, WRITE_TO_FILE};
 
@@ -10,10 +12,25 @@ void ControlPlanner::callPlanner() {
     lock.unlock();
     planner.call(req, res);
 
+    PublishDMPPlan(res.path);
+
     static bool first = true;
     EGraphStatWriter::writeStatsToFile("navigation_xy_stats.csv", first, res.stat_names, res.stat_values);
     first = false;
   }
+}
+
+void ControlPlanner::PublishDMPPlan(const std::vector<geometry_msgs::PoseStamped> &dmp_points) {
+  //create a message for the plan
+  nav_msgs::Path dmp_path;
+  dmp_path.poses.resize(dmp_points.size());
+  dmp_path.header.frame_id = planner_costmap_ros_->getGlobalFrameID();
+  dmp_path.header.stamp = ros::Time::now();
+  for (unsigned int i = 0; i < dmp_points.size(); i++) {
+    dmp_path.poses[i].pose.position.x = dmp_points[i].pose.orientation.x;
+    dmp_path.poses[i].pose.position.y = dmp_points[i].pose.orientation.y;
+  }
+  plan_pub_.publish(dmp_path);  // publishes the generated plan (with DMP)
 }
 
 void ControlPlanner::processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback) {
@@ -169,14 +186,19 @@ ControlPlanner::ControlPlanner() {
   fclose(fout);
   test_num = 0;
 
+  plan_pub_ = ros::NodeHandle().advertise<nav_msgs::Path>("plan_with_dmp", 1);
+
   planner_costmap_ros_ = new costmap_2d::Costmap2DROS("global_costmap", tf_);
   planner_costmap_ros_->pause();
   std::vector<geometry_msgs::Point> footprint = planner_costmap_ros_->getRobotFootprint();
+
   double max_radius = 0;
   for (unsigned int i = 0; i < footprint.size(); i++) {
     double r = sqrt(footprint[i].x * footprint[i].x + footprint[i].y * footprint[i].y);
-    if (r > max_radius)
+    if (r > max_radius) {
       max_radius = r;
+      req.base_radius = r;
+    }
   }
 
   server = new interactive_markers::InteractiveMarkerServer("robot_marker");

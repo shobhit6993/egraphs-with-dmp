@@ -12,6 +12,7 @@
   <depend package="costmap_2d"/>
   <depend package="egraphs"/>
   <depend package="egraph_vis"/>
+  <depend package="potential_field_dmp"/>
 
 </package>
 

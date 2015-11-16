@@ -101,8 +101,15 @@ void GenerateTrajectory_1D(const double start,
     double s, x_dot, v_dot, pot_gr;
 
     WayPoint w;
+    w.position = x;
+    w.velocity = v;
+    w.acceleration = 0.0;
+    w.timestep = curr_time;
+
+    trajectory.waypoint.push_back(w);
+    // std::cout << x << " 1d " << goal << std::endl;
     // while (curr_time < tau) {
-    while (!IsNear(x, goal)) {
+    while (!IsNear(x, goal) && curr_time < 10) {
         // calculates x and v at t=timestep by integrating
         for (double t = 0; t <= time_resolution; t = t + dt)
         {
@@ -123,7 +130,7 @@ void GenerateTrajectory_1D(const double start,
         w.velocity = v;
         w.acceleration = 0.0;
         w.timestep = curr_time;
-        std::cout << curr_time << "\t" << x << std::endl;
+        std::cout << curr_time << "\t" << x << "\t" << goal << std::endl;
 
         trajectory.waypoint.push_back(w);
         curr_time += time_resolution;

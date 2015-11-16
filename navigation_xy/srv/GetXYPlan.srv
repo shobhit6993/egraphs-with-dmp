@@ -1,3 +1,6 @@
+#robot's base radius
+float64 base_radius
+
 float64 start_x
 float64 start_y
 float64 goal_x

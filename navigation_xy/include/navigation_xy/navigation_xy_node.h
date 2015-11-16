@@ -7,15 +7,37 @@
 #include <tf/transform_listener.h>
 #include <navigation_xy/GetXYPlan.h>
 #include <navigation_xy/navigation_xy.h>
+#include "potential_field_dmp/Trajectory_1D.h"
+#include "potential_field_dmp/Parameters.h"
+#include "potential_field_dmp/Plan.h"
+#include "potential_field_dmp/WayPoint.h"
+#include "potential_field_dmp/SetParamDMP.h"
+#include "potential_field_dmp/GenerateDMPPlan.h"
 
-class EGraphXYNode{
-  public:
+class EGraphXYNode {
+public:
     EGraphXYNode(costmap_2d::Costmap2DROS* costmap_ros);
     bool makePlan(navigation_xy::GetXYPlan::Request& req, navigation_xy::GetXYPlan::Response& res);
 
-  private:
+    bool HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request& req,
+                               navigation_xy::GetXYPlan::Response& res);
+
+    bool GenerateDMPPlan(const geometry_msgs::PoseStamped& dmp_start,
+                         const geometry_msgs::PoseStamped& dmp_goal,
+                         double dmp_obs_x,
+                         double dmp_obs_y,
+                         potential_field_dmp::Plan &dmp_plan);
+
+    bool SetParametersDMP();
+    bool ReadParameters();
+    bool IsInCollision(const geometry_msgs::PoseStamped& point,
+                       double dmp_obs_x,
+                       double dmp_obs_y,
+                       double base_radius);
+
+private:
     costmap_2d::Costmap2DROS* costmap_ros_;
-    costmap_2d::Costmap2D cost_map_;  
+    costmap_2d::Costmap2D cost_map_;
 
     EGraphXY* env_;
     EGraph* egraph_;
@@ -26,7 +48,10 @@ class EGraphXYNode{
 
     ros::Publisher plan_pub_;
     ros::ServiceServer plan_service_;
+    ros::NodeHandle nh_;
 
     ros::Subscriber interrupt_sub_;
     void interruptPlannerCallback(std_msgs::EmptyConstPtr);
+
+    std::vector<potential_field_dmp::Parameters> param_;
 };
