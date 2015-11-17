@@ -23,17 +23,32 @@ bool IsNear(const double curr, const double goal) {
     return (abs(curr - goal) <= kProximityThreshold);
 }
 
-double CalculateDistanceFromObstacle(double x, double obs_pos) {
-    return abs(x - obs_pos);
+double CalculateDistanceFromObstacle(const std::vector<double>& robot_pos,
+                                     const std::vector<double>& obs_pos) {
+    int dim = robot_pos.size();
+    double sum = 0;
+
+    for (int d = 0; d < dim; ++d) {
+        sum = sum + (robot_pos[d] - obs_pos[d]) * (robot_pos[d] - obs_pos[d]);
+    }
+
+    return sqrt(sum);
 }
 
-double CalculateDerivativeOfDistance(double x) {
-    return 1;
+double CalculateDerivativeOfDistance(const double x,
+                                     const double x_0,
+                                     const double dist) {
+    //TODO: abs(x-x_0)??
+    return (x - x_0) / dist;
 }
 
-double CalculatePotentialGradient(double x, double eta, double p_0, double obs_pos) {
-    double p_x = CalculateDistanceFromObstacle(x, obs_pos);
-    double p_x_dash = CalculateDerivativeOfDistance(x);
+double CalculatePotentialGradient(const std::vector<double>& robot_pos,
+                                  const std::vector<double>& obs_pos,
+                                  const int dim_index,
+                                  const double p_0,
+                                  const double eta) {
+    double p_x = CalculateDistanceFromObstacle(robot_pos, obs_pos);
+    double p_x_dash = CalculateDerivativeOfDistance(robot_pos[dim_index], obs_pos[dim_index], p_x);
     double temp = ((p_0 - p_x) * p_x_dash) / (p_0 * p_x * p_x * p_x);
 
     return -(eta * temp);
@@ -57,7 +72,7 @@ void SetParametersDMP_1D(const Parameters &param,
     // double start = trajectory.waypoint[0].position;
     // double goal = trajectory.waypoint[n - 1].position;
 
-    DMPequation *new_dmp_equation = new DMPequation(k, d, alpha, eta, p_0);
+    DMPequation *new_dmp_equation = new DMPequation(k, d, tau, alpha, eta, p_0);
     dmp_equation.push_back(new_dmp_equation);
 
 }
@@ -75,70 +90,6 @@ void SetParametersDMP_nD(const std::vector<Parameters> &param,
     }
 }
 
-//
-void GenerateTrajectory_1D(const double start,
-                           const double goal,
-                           const double initial_velocity,
-                           const double obs_pos,
-                           const double time_resolution,
-                           const double tau,
-                           const DMPequation* dmp_equation,
-                           Trajectory_1D &trajectory) {
-
-    trajectory.waypoint.clear();
-
-    double k = dmp_equation->k;
-    double d = dmp_equation->d;
-    // double tau = dmp_equation->tau;
-    double alpha = CalculateAlpha();
-    double eta =  dmp_equation->eta;
-    double p_0 = dmp_equation->p_0;
-
-    double x = start;
-    double v = initial_velocity;
-    double curr_time = 0.0;
-
-    double s, x_dot, v_dot, pot_gr;
-
-    WayPoint w;
-    w.position = x;
-    w.velocity = v;
-    w.acceleration = 0.0;
-    w.timestep = curr_time;
-
-    trajectory.waypoint.push_back(w);
-    // std::cout << x << " 1d " << goal << std::endl;
-    // while (curr_time < tau) {
-    while (!IsNear(x, goal) && curr_time < 10) {
-        // calculates x and v at t=timestep by integrating
-        for (double t = 0; t <= time_resolution; t = t + dt)
-        {
-            s = CalculatePhase(curr_time + t, tau, alpha);
-            pot_gr = CalculatePotentialGradient(x, eta, p_0, obs_pos);
-            // f_s = dmp_equation->interpolator->InterpolatedValue(s);
-            // v_dot = (k * (goal - x) - d * v - k * (goal - start) * s + k * f_s) / tau;
-            v_dot = (k * (goal - x) - d * v - k * (goal - start) * s - pot_gr) / tau;
-            x_dot = v / tau;
-
-            x = x + x_dot * dt;
-            v = v + v_dot * dt;
-
-            std::cout << "t=" << t << " s=" << s << " pot_gr=" << pot_gr << " v_dot=" << v_dot << " x_dot=" << x_dot << " x=" << x << " v=" << v << " g=" << goal << std::endl;
-        }
-        std::cout << "---------" << std::endl;
-
-        // does not compute and return acceleration values in WayPoint
-        w.position = x;
-        w.velocity = v;
-        w.acceleration = 0.0;
-        w.timestep = curr_time;
-        std::cout << curr_time << "\t" << x << "\t" << goal << std::endl;
-
-        trajectory.waypoint.push_back(w);
-        curr_time += time_resolution;
-    }
-}
-
 void GenerateTrajectory_nD(const vector<double> start,
                            const vector<double> goal,
                            const vector<double> initial_velocity,
@@ -149,18 +100,47 @@ void GenerateTrajectory_nD(const vector<double> start,
                            Plan &generated_plan) {
 
     int dim = dmp_equation.size();
-    Trajectory_1D trajectory_1d;
+
+    generated_plan.traj.resize(dim);
+    double curr_time = 0.0;
+
+    WayPoint w;
+    w.acceleration = 0.0;
+    w.timestep = curr_time;
+
+    // [ push start point of each dimension in corresponding trajectory
+    for (int d = 0; d < dim; ++d) {
+        w.position = start[d];
+        w.velocity = initial_velocity[d];
+        generated_plan.traj[d].waypoint.push_back(w);
+    }
+    // ]
+
+    vector<double> curr_pos(start);
+    vector<double> curr_vel(initial_velocity);
+
+    bool check = true;
+    int d = 0;
+    while (check) {
+        check = false;
+        for (int d = 0; d < dim; ++d) {
+            if (!IsNear(curr_pos[d], goal[d]) && curr_time <= dmp_equation[d]->tau) {
+                w = IntegrateForOneTimestep(d, dmp_equation[d], start[d], goal[d], dt, curr_time, obs_pos, curr_pos, curr_vel);
+
+                generated_plan.traj[d].waypoint.push_back(w);
+                check = true;
+            }
+        }
+        curr_time += dt;
+    }
+
     size_t max_timesteps = 0;
     int m;
 
-    for (int i = 0; i < dim; ++i) {
-        trajectory_1d.waypoint.clear();
-        GenerateTrajectory_1D(start[i], goal[i], initial_velocity[i], obs_pos[i], dt, tau, dmp_equation[i], trajectory_1d);
-        generated_plan.traj.push_back(trajectory_1d);
-
-        if (max_timesteps < trajectory_1d.waypoint.size()) {
-            m = i;
-            max_timesteps = trajectory_1d.waypoint.size();
+    for (int d = 0; d < dim; ++d) {
+        if (max_timesteps < generated_plan.traj[d].waypoint.size()) {
+            m = d;
+            max_timesteps = generated_plan.traj[d].waypoint.size();
         }
     }
 
@@ -177,4 +157,56 @@ void GenerateTrajectory_nD(const vector<double> start,
             }
         }
     }
+}
+
+WayPoint IntegrateForOneTimestep( const int dim_index,
+                                  const DMPequation* dmp_equation,
+                                  const double start,
+                                  const double goal,
+                                  const double time_resolution,
+                                  double curr_time,
+                                  const vector<double>& obs_pos,
+                                  vector<double>& curr_pos,
+                                  vector<double>& curr_vel
+                                ) {
+    double k = dmp_equation->k;
+    double d = dmp_equation->d;
+    double tau = dmp_equation->tau;
+    double alpha = CalculateAlpha();
+    double eta =  dmp_equation->eta;
+    double p_0 = dmp_equation->p_0;
+
+    double x = curr_pos[dim_index];
+    double v = curr_vel[dim_index];
+
+    double s, x_dot, v_dot, pot_gr;
+
+    WayPoint w;
+
+    std::cout << "dim= " << dim_index << std::endl;
+    for (double t = 0; t <= time_resolution; t = t + dt)
+    {
+        s = CalculatePhase(curr_time + t, tau, alpha);
+        pot_gr = CalculatePotentialGradient(curr_pos, obs_pos, dim_index, p_0, eta);
+        // f_s = dmp_equation->interpolator->InterpolatedValue(s);
+        // v_dot = (k * (goal - x) - d * v - k * (goal - start) * s + k * f_s) / tau;
+        v_dot = (k * (goal - x) - d * v - k * (goal - start) * s - pot_gr) / tau;
+        x_dot = v / tau;
+
+        x = x + x_dot * dt;
+        v = v + v_dot * dt;
+
+        curr_pos[dim_index] = x;
+        curr_vel[dim_index] = v;
+
+        std::cout << "t=" << t << " s=" << s << " pot_gr=" << pot_gr << " v_dot=" << v_dot << " x_dot=" << x_dot << " x=" << x << " v=" << v << " g=" << goal << std::endl;
+    }
+
+    w.position = x;
+    w.velocity = v;
+    w.acceleration = 0.0;
+    w.timestep = curr_time;
+    std::cout << curr_time << "\t" << x << "\t" << goal << std::endl;
+
+    return w;
 }
