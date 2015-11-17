@@ -154,12 +154,27 @@ bool EGraphXYNode::HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request
   new_point.pose.orientation.y = 0;
   new_point.pose.orientation.z = 0;
 
-  for (int i = 0; i < num_points; ++i) {
-    int o = 0;
-    while (o < num_obstacles) {
+  bool collision = false;
+  int i = 0;
+  while (i < num_points) {
+    collision = false;
+    for (int o = 0; o < num_obstacles; ++o) {
       if (IsInCollision(res.path[i], req.obs_x[o], req.obs_y[o], req.base_radius)) {
+        std::cout << "i=" << i << " " << res.path[i].pose.position.x
+                  << " " << res.path[i].pose.position.y
+                  << "..." << req.obs_x[o] << " " << req.obs_y[o] << std::endl;
+        
         dmp_start_offset = (i - kOffset >= 0) ? i - kOffset : 0;
         dmp_start = res.path[dmp_start_offset];
+
+        // search for first point on egraphs path that is beyond obstacles' influence
+        i++;
+        while(i<num_points) {
+          if (!IsInCollision(res.path[i], req.obs_x[o], req.obs_y[o], req.base_radius))
+            break;
+
+          i++;
+        }
 
         dmp_goal_offset = (i + kOffset < num_points) ? i + kOffset : num_points - 1;
         dmp_goal = res.path[dmp_goal_offset];
@@ -174,12 +189,13 @@ bool EGraphXYNode::HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request
           corrected_path.push_back(new_point);
         }
 
-        o = o + dmp_goal_offset + 1;
-
-      } else {
-        corrected_path.push_back(res.path[i]);
-        o++;
+        collision = true;
+        i = dmp_goal_offset + 1;
       }
+    }
+    if (!collision) {
+      corrected_path.push_back(res.path[i]);
+      i++;
     }
   }
 
@@ -193,7 +209,8 @@ bool EGraphXYNode::IsInCollision(const geometry_msgs::PoseStamped& point,
                                  double base_radius) {
   double x_clearance = abs(point.pose.position.x - dmp_obs_x);
   double y_clearance = abs(point.pose.position.y - dmp_obs_y);
-  return (x_clearance < base_radius || y_clearance < base_radius);
+  double dist = sqrt(x_clearance * x_clearance + y_clearance * y_clearance);
+  return (dist < base_radius);
 }
 
 bool EGraphXYNode::GenerateDMPPlan(const geometry_msgs::PoseStamped & dmp_start,

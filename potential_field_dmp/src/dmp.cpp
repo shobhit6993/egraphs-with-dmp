@@ -122,8 +122,10 @@ void GenerateTrajectory_1D(const double start,
 
             x = x + x_dot * dt;
             v = v + v_dot * dt;
+
+            std::cout << "t=" << t << " s=" << s << " pot_gr=" << pot_gr << " v_dot=" << v_dot << " x_dot=" << x_dot << " x=" << x << " v=" << v << " g=" << goal << std::endl;
         }
-        // std::cout<<s<<"\t"<<f_s<<std::endl;
+        std::cout << "---------" << std::endl;
 
         // does not compute and return acceleration values in WayPoint
         w.position = x;
