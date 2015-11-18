@@ -42,6 +42,7 @@ WayPoint IntegrateForOneTimestep( const int dim_index,
                                   const double time_resolution,
                                   const double curr_time,
                                   const vector<double>& obs_pos,
+                                  const string& mode,
                                   vector<double>& curr_pos,
                                   vector<double>& curr_vel
                                 );
@@ -53,21 +54,26 @@ void GenerateTrajectory_nD(const vector<double> start,
                            const double dt,
                            const double tau,
                            const vector<DMPequation*> &dmp_equation,
+                           const string& mode,
                            Plan &generated_plan);
 
 double CalculatePhase(double t, double tau, double alpha);
 double CalculateAlpha();
-bool IsNear(const double curr, const double goal);
+bool IsNear(const std::vector<double>& robot_pos,
+            const std::vector<double>& goal);
 double CalculatePotentialGradient(const std::vector<double>& robot_pos,
                                   const std::vector<double>& obs_pos,
                                   const int dim_index,
                                   const double p_0,
-                                  const double eta);
+                                  const double eta,
+                                  const string& mode);
 double CalculateDerivativeOfDistance(const double x,
                                      const double x_0,
-                                     const double dist);
+                                     const double dist,
+                                     const string& mode);
 double CalculateDistanceFromObstacle(const std::vector<double>& robot_pos,
-                                     const std::vector<double>& obs_pos);
+                                     const std::vector<double>& obs_pos,
+                                     const string& mode);
 
 
 

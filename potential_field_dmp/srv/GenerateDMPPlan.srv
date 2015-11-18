@@ -16,6 +16,9 @@ float64 tau
 # time resolution for numerical intergration
 float64 dt
 
+# mode of potential field for DMP
+string mode
+
 ---
 
 # the generated plan

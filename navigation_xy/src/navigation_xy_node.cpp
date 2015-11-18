@@ -246,6 +246,7 @@ bool EGraphXYNode::GenerateDMPPlan(const geometry_msgs::PoseStamped & dmp_start,
   gen_plan_srv.request.initial_velocity = initial_velocity;
   gen_plan_srv.request.tau = kParamTau;
   gen_plan_srv.request.dt = kParamDT;
+  gen_plan_srv.request.mode = dmp_mode_;
 
   if (gen_dmp_plan_client.call(gen_plan_srv)) {
     dmp_plan = gen_plan_srv.response.generated_plan;
@@ -293,6 +294,7 @@ bool EGraphXYNode::ReadParameters() {
       fin >> param_[i].eta;
       fin >> param_[i].p_0;
     }
+    fin >> dmp_mode_;
     fin.close();
     return true;
   } catch (std::ifstream::failure e) {

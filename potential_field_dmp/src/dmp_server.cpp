@@ -30,6 +30,7 @@ bool GenerateDMPPlanHandler(GenerateDMPPlan::Request  &req,
                         req.dt,
                         req.tau,
                         learned_dmp,
+                        req.mode,
                         res.generated_plan);
   return true;
 }
@@ -40,15 +41,6 @@ bool GenerateDMPPlanHandler(GenerateDMPPlan::Request  &req,
 bool SetParametersDMPHandler(SetParamDMP::Request  &req,
                              SetParamDMP::Response &res ) {
   std::cout << "Request received for setting parameters" << std::endl;
-  // for (int j = 0; j < req.demo.traj[0].waypoint.size(); ++j)
-  // {
-  //     for (int i = 0; i < 3; ++i)
-  //     {
-  //         std::cout << req.demo.traj[i].waypoint[j];
-  //     }
-  //     std::cout<<"------------"<<std::endl;
-  // }
-
   SetParametersDMP_nD(req.param, learned_dmp);
   return true;
 }

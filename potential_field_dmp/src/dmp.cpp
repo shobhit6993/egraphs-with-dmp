@@ -19,39 +19,65 @@ double CalculateAlpha() {
     return log(100);
 }
 
-bool IsNear(const double curr, const double goal) {
-    return (abs(curr - goal) <= kProximityThreshold);
-}
-
-double CalculateDistanceFromObstacle(const std::vector<double>& robot_pos,
-                                     const std::vector<double>& obs_pos) {
+bool IsNear(const std::vector<double>& robot_pos,
+            const std::vector<double>& goal) {
     int dim = robot_pos.size();
     double sum = 0;
 
     for (int d = 0; d < dim; ++d) {
-        sum = sum + (robot_pos[d] - obs_pos[d]) * (robot_pos[d] - obs_pos[d]);
+        sum = sum + (robot_pos[d] - goal[d]) * (robot_pos[d] - goal[d]);
     }
+    return (sqrt(sum) < kProximityThreshold);
+}
 
-    return sqrt(sum);
+double CalculateDistanceFromObstacle(const std::vector<double>& robot_pos,
+                                     const std::vector<double>& obs_pos,
+                                     const std::string& mode) {
+    int dim = robot_pos.size();
+    double sum = 0;
+
+    if (mode == "static,L2") {
+        for (int d = 0; d < dim; ++d) {
+            sum = sum + (robot_pos[d] - obs_pos[d]) * (robot_pos[d] - obs_pos[d]);
+        }
+        return sqrt(sum);
+    // }
+    // else if (mode == "static,L1") {
+    //     for (int d = 0; d < dim; ++d) {
+    //         sum = sum + abs(robot_pos[d] - obs_pos[d]);
+    //     }
+    //     return sum;
+    } else {
+        std::cout << "ERROR: invalid mode. Exiting..." << std::endl;
+        exit(1);
+    }
 }
 
 double CalculateDerivativeOfDistance(const double x,
                                      const double x_0,
-                                     const double dist) {
-    //TODO: abs(x-x_0)??
-    return (x - x_0) / dist;
+                                     const double dist,
+                                     const std::string& mode) {
+    if (mode == "static,L2")
+        return (x - x_0) / dist;
+    // else if (mode == "static,L1")
+    //     return 1;
+    else {
+        std::cout << "ERROR: invalid mode. Exiting..." << std::endl;
+        exit(1);
+    }
 }
 
 double CalculatePotentialGradient(const std::vector<double>& robot_pos,
                                   const std::vector<double>& obs_pos,
                                   const int dim_index,
                                   const double p_0,
-                                  const double eta) {
-    double p_x = CalculateDistanceFromObstacle(robot_pos, obs_pos);
-    if(p_x > p_0)
+                                  const double eta,
+                                  const std::string& mode) {
+    double p_x = CalculateDistanceFromObstacle(robot_pos, obs_pos, mode);
+    if (p_x > p_0)
         return 0.0;
-    
-    double p_x_dash = CalculateDerivativeOfDistance(robot_pos[dim_index], obs_pos[dim_index], p_x);
+
+    double p_x_dash = CalculateDerivativeOfDistance(robot_pos[dim_index], obs_pos[dim_index], p_x, mode);
     double temp = ((p_0 - p_x) * p_x_dash) / (p_0 * p_x * p_x * p_x);
 
     return -(eta * temp);
@@ -100,6 +126,7 @@ void GenerateTrajectory_nD(const vector<double> start,
                            const double dt,
                            const double tau,
                            const vector<DMPequation*> &dmp_equation,
+                           const string& mode,
                            Plan &generated_plan) {
 
     int dim = dmp_equation.size();
@@ -123,12 +150,15 @@ void GenerateTrajectory_nD(const vector<double> start,
     vector<double> curr_vel(initial_velocity);
 
     bool check = true;
-    int d = 0;
     while (check) {
         check = false;
         for (int d = 0; d < dim; ++d) {
-            if (!IsNear(curr_pos[d], goal[d]) && curr_time <= dmp_equation[d]->tau) {
-                w = IntegrateForOneTimestep(d, dmp_equation[d], start[d], goal[d], dt, curr_time, obs_pos, curr_pos, curr_vel);
+            // if (!IsNear(curr_pos[d], goal[d]) && curr_time <= dmp_equation[d]->tau) {
+            if (!IsNear(curr_pos, goal) && curr_time <= dmp_equation[d]->tau) {
+                w = IntegrateForOneTimestep(d, dmp_equation[d],
+                                            start[d], goal[d],
+                                            dt, curr_time, obs_pos,
+                                            mode, curr_pos, curr_vel);
 
                 generated_plan.traj[d].waypoint.push_back(w);
                 check = true;
@@ -169,9 +199,9 @@ WayPoint IntegrateForOneTimestep( const int dim_index,
                                   const double time_resolution,
                                   double curr_time,
                                   const vector<double>& obs_pos,
+                                  const string& mode,
                                   vector<double>& curr_pos,
-                                  vector<double>& curr_vel
-                                ) {
+                                  vector<double>& curr_vel) {
     double k = dmp_equation->k;
     double d = dmp_equation->d;
     double tau = dmp_equation->tau;
@@ -186,11 +216,11 @@ WayPoint IntegrateForOneTimestep( const int dim_index,
 
     WayPoint w;
 
-    if(dim_index == 0) std::cout << "dim= " << dim_index << std::endl;
+    if (dim_index == 0) std::cout << "dim= " << dim_index << std::endl;
     for (double t = 0; t <= time_resolution; t = t + dt)
     {
         s = CalculatePhase(curr_time + t, tau, alpha);
-        pot_gr = CalculatePotentialGradient(curr_pos, obs_pos, dim_index, p_0, eta);
+        pot_gr = CalculatePotentialGradient(curr_pos, obs_pos, dim_index, p_0, eta, mode);
         // f_s = dmp_equation->interpolator->InterpolatedValue(s);
         // v_dot = (k * (goal - x) - d * v - k * (goal - start) * s + k * f_s) / tau;
         v_dot = (k * (goal - x) - d * v - k * (goal - start) * s - pot_gr) / tau;
@@ -209,7 +239,7 @@ WayPoint IntegrateForOneTimestep( const int dim_index,
     w.velocity = v;
     w.acceleration = 0.0;
     w.timestep = curr_time;
-    if(dim_index == 0) std::cout << curr_time << "\t" << x << "\t" << goal << std::endl;
+    if (dim_index == 0) std::cout << curr_time << "\t" << x << "\t" << goal << std::endl;
 
     return w;
 }

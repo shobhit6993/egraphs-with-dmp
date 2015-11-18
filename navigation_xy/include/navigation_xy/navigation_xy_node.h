@@ -54,4 +54,5 @@ private:
     void interruptPlannerCallback(std_msgs::EmptyConstPtr);
 
     std::vector<potential_field_dmp::Parameters> param_;
+    std::string dmp_mode_;
 };
