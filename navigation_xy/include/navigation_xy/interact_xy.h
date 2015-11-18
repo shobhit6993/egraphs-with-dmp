@@ -13,7 +13,7 @@ public:
     void callPlanner();
     void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
     void PublishDMPPlan(const std::vector<geometry_msgs::PoseStamped> &dmp_pose);
-
+    void ClearReqRes();
     ControlPlanner();
 
 private:

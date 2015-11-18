@@ -5,18 +5,28 @@
 
 enum MenuItems {PLAN = 1, PLAN_AND_FEEDBACK, PLAN_WITH_EGRAPHS, PLAN_WITH_EGRAPHS_AND_FEEDBACK, INTERRUPT, WRITE_TO_FILE};
 
+void ControlPlanner::ClearReqRes() {
+  req.obs_x.clear();
+  req.obs_y.clear();
+  res.path.clear();
+  res.stat_names.clear();
+  res.stat_values.clear();
+}
+
 void ControlPlanner::callPlanner() {
   while (ros::ok()) {
     boost::unique_lock<boost::mutex> lock(mutex);
     call_planner_cond.wait(lock);
     lock.unlock();
     planner.call(req, res);
-
+    
     PublishDMPPlan(res.path);
-
+    
     static bool first = true;
     EGraphStatWriter::writeStatsToFile("navigation_xy_stats.csv", first, res.stat_names, res.stat_values);
     first = false;
+    
+    ClearReqRes();
   }
 }
 
@@ -27,8 +37,8 @@ void ControlPlanner::PublishDMPPlan(const std::vector<geometry_msgs::PoseStamped
   dmp_path.header.frame_id = planner_costmap_ros_->getGlobalFrameID();
   dmp_path.header.stamp = ros::Time::now();
   for (unsigned int i = 0; i < dmp_points.size(); i++) {
-    dmp_path.poses[i].pose.position.x = dmp_points[i].pose.orientation.x;
-    dmp_path.poses[i].pose.position.y = dmp_points[i].pose.orientation.y;
+    dmp_path.poses[i].pose.position.x = dmp_points[i].pose.position.x;
+    dmp_path.poses[i].pose.position.y = dmp_points[i].pose.position.y;
   }
   plan_pub_.publish(dmp_path);  // publishes the generated plan (with DMP)
 }
@@ -214,8 +224,8 @@ ControlPlanner::ControlPlanner() {
     // create a grey box marker
     visualization_msgs::Marker marker;
     marker.type = visualization_msgs::Marker::CYLINDER;
-    marker.scale.x = max_radius * 2;
-    marker.scale.y = max_radius * 2;
+    marker.scale.x = max_radius;
+    marker.scale.y = max_radius;
     marker.scale.z = 0.1;
     marker.color.r = 0.0;
     marker.color.g = 1.0;
@@ -253,8 +263,8 @@ ControlPlanner::ControlPlanner() {
     // create a grey box marker
     visualization_msgs::Marker marker;
     marker.type = visualization_msgs::Marker::CYLINDER;
-    marker.scale.x = max_radius * 2;
-    marker.scale.y = max_radius * 2;
+    marker.scale.x = max_radius;
+    marker.scale.y = max_radius;
     marker.scale.z = 0.1;
     marker.color.r = 1.0;
     marker.color.g = 0.0;
@@ -315,10 +325,10 @@ ControlPlanner::ControlPlanner() {
       control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MOVE_PLANE;
       int_marker.controls.push_back(control);
 
-      // visualization_msgs::InteractiveMarkerControl menu_control;
-      // menu_control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MENU;
-      // menu_control.name = "menu_control";
-      // int_marker.controls.push_back(menu_control);
+      visualization_msgs::InteractiveMarkerControl menu_control;
+      menu_control.interaction_mode = visualization_msgs::InteractiveMarkerControl::MENU;
+      menu_control.name = "menu_control";
+      int_marker.controls.push_back(menu_control);
 
       // add the interactive marker to our collection &
       // tell the server to call processFeedback() when feedback arrives for it
@@ -334,6 +344,9 @@ ControlPlanner::ControlPlanner() {
   menu_handler.insert("Write to file", boost::bind(&ControlPlanner::processFeedback, this, _1));
   menu_handler.apply(*server, "robot start");
   menu_handler.apply(*server, "robot goal");
+  for (int i = 0; i < kNumMarkers; ++i) {
+    menu_handler.apply(*server, "obstacle " + std::to_string(i));
+  }
 
   // 'commit' changes and send to all clients
   server->applyChanges();

@@ -48,6 +48,9 @@ double CalculatePotentialGradient(const std::vector<double>& robot_pos,
                                   const double p_0,
                                   const double eta) {
     double p_x = CalculateDistanceFromObstacle(robot_pos, obs_pos);
+    if(p_x > p_0)
+        return 0.0;
+    
     double p_x_dash = CalculateDerivativeOfDistance(robot_pos[dim_index], obs_pos[dim_index], p_x);
     double temp = ((p_0 - p_x) * p_x_dash) / (p_0 * p_x * p_x * p_x);
 
@@ -183,7 +186,7 @@ WayPoint IntegrateForOneTimestep( const int dim_index,
 
     WayPoint w;
 
-    std::cout << "dim= " << dim_index << std::endl;
+    if(dim_index == 0) std::cout << "dim= " << dim_index << std::endl;
     for (double t = 0; t <= time_resolution; t = t + dt)
     {
         s = CalculatePhase(curr_time + t, tau, alpha);
@@ -199,14 +202,14 @@ WayPoint IntegrateForOneTimestep( const int dim_index,
         curr_pos[dim_index] = x;
         curr_vel[dim_index] = v;
 
-        std::cout << "t=" << t << " s=" << s << " pot_gr=" << pot_gr << " v_dot=" << v_dot << " x_dot=" << x_dot << " x=" << x << " v=" << v << " g=" << goal << std::endl;
+        // std::cout << "t=" << t << " s=" << s << " pot_gr=" << pot_gr << " v_dot=" << v_dot << " x_dot=" << x_dot << " x=" << x << " v=" << v << " g=" << goal << std::endl;
     }
 
     w.position = x;
     w.velocity = v;
     w.acceleration = 0.0;
     w.timestep = curr_time;
-    std::cout << curr_time << "\t" << x << "\t" << goal << std::endl;
+    if(dim_index == 0) std::cout << curr_time << "\t" << x << "\t" << goal << std::endl;
 
     return w;
 }

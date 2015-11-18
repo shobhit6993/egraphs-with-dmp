@@ -163,13 +163,13 @@ bool EGraphXYNode::HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request
         std::cout << "i=" << i << " " << res.path[i].pose.position.x
                   << " " << res.path[i].pose.position.y
                   << "..." << req.obs_x[o] << " " << req.obs_y[o] << std::endl;
-        
+
         dmp_start_offset = (i - kOffset >= 0) ? i - kOffset : 0;
         dmp_start = res.path[dmp_start_offset];
 
         // search for first point on egraphs path that is beyond obstacles' influence
         i++;
-        while(i<num_points) {
+        while (i < num_points) {
           if (!IsInCollision(res.path[i], req.obs_x[o], req.obs_y[o], req.base_radius))
             break;
 
@@ -184,8 +184,8 @@ bool EGraphXYNode::HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request
           return false;
 
         for (int w = 0; w < dmp_plan.traj[0].waypoint.size(); ++w) {  // for each waypoint
-          new_point.pose.orientation.x = dmp_plan.traj[0].waypoint[w].position;
-          new_point.pose.orientation.y = dmp_plan.traj[1].waypoint[w].position;
+          new_point.pose.position.x = dmp_plan.traj[0].waypoint[w].position;
+          new_point.pose.position.y = dmp_plan.traj[1].waypoint[w].position;
           corrected_path.push_back(new_point);
         }
 
@@ -217,7 +217,7 @@ bool EGraphXYNode::GenerateDMPPlan(const geometry_msgs::PoseStamped & dmp_start,
                                    const geometry_msgs::PoseStamped & dmp_goal,
                                    double dmp_obs_x,
                                    double dmp_obs_y,
-                                   Plan & dmp_plan) {
+                                   Plan& dmp_plan) {
 
   ros::ServiceClient gen_dmp_plan_client =
     nh_.serviceClient<potential_field_dmp::GenerateDMPPlan>("generate_dmp_plan");
