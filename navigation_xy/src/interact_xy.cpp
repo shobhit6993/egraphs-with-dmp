@@ -2,6 +2,9 @@
 #include <egraphs/egraph_stat_writer.h>
 #include <navigation_xy/constants.h>
 #include <nav_msgs/Path.h>
+#include <move_pr2/MovePR2.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Twist.h>
 
 enum MenuItems {PLAN = 1, PLAN_AND_FEEDBACK, PLAN_WITH_EGRAPHS, PLAN_WITH_EGRAPHS_AND_FEEDBACK, INTERRUPT, WRITE_TO_FILE};
 
@@ -19,14 +22,41 @@ void ControlPlanner::callPlanner() {
     call_planner_cond.wait(lock);
     lock.unlock();
     planner.call(req, res);
-    
+
     PublishDMPPlan(res.path);
-    
+
     static bool first = true;
     EGraphStatWriter::writeStatsToFile("navigation_xy_stats.csv", first, res.stat_names, res.stat_values);
     first = false;
-    
+
+    MoveRobot(res);
     ClearReqRes();
+  }
+}
+
+void ControlPlanner::MoveRobot(const navigation_xy::GetXYPlan::Response &r) {
+
+  for (int i = 0; i < r.vel.size(); ++i) {
+    std::cout << r.vel[i].linear.x << "," << r.vel[i].linear.y << std::endl;
+  }
+
+  ros::NodeHandle n;
+  ROS_INFO("Waiting for move_pr2_service to come up");
+  ros::service::waitForService("move_pr2_service", -1);
+  ROS_INFO("move_pr2_servive alive");
+
+  ros::ServiceClient move_pr2_client =
+    n.serviceClient<move_pr2::MovePR2>("move_pr2_service");
+  move_pr2::MovePR2 move_pr2_srv;
+
+  move_pr2_srv.request.vel = r.vel;
+  move_pr2_srv.request.path = r.path;
+
+  if (move_pr2_client.call(move_pr2_srv)) {
+    return ;
+  } else {
+    ROS_ERROR("Failed to call move_pr2_service");
+    return ;
   }
 }
 

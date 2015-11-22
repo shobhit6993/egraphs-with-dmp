@@ -1,0 +1,18 @@
+<package>
+  <description brief="move_pr2">
+
+     move_pr2
+
+  </description>
+  <author>shobhit</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/move_pr2</url>
+  <depend package="roscpp"/>
+  <depend package="geometry_msgs"/>
+  <depend package="tf"/>
+  <!-- <depend package="gazebo_msgs"/> -->
+
+</package>
+
+

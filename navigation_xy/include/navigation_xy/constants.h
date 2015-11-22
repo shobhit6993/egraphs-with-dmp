@@ -13,3 +13,5 @@ const double kParamTau = 1.0;
 const double kParamEta = 10.0;
 const double kParamP_0 = 2.0;
 const double kParamDT = 0.1;
+
+const double kSpeed = 2.0;

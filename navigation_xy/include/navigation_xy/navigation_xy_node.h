@@ -22,18 +22,20 @@ public:
     bool HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request& req,
                                navigation_xy::GetXYPlan::Response& res);
 
-    bool GenerateDMPPlan(const geometry_msgs::PoseStamped& dmp_start,
-                         const geometry_msgs::PoseStamped& dmp_goal,
-                         double dmp_obs_x,
-                         double dmp_obs_y,
-                         potential_field_dmp::Plan &dmp_plan);
+    bool GenerateDMPPlan(const geometry_msgs::PoseStamped & dmp_start,
+                                       const geometry_msgs::PoseStamped & dmp_goal,
+                                       geometry_msgs::Twist initial_vel,
+                                       double dmp_obs_x,
+                                       double dmp_obs_y,
+                                       potential_field_dmp::Plan& dmp_plan);
 
     bool SetParametersDMP();
     bool ReadParameters();
-    bool IsInCollision(const geometry_msgs::PoseStamped& point,
+    bool IsInCollision(const geometry_msgs::PoseStamped & point,
                        double dmp_obs_x,
                        double dmp_obs_y,
                        double base_radius);
+    void SetVelocity(int i, navigation_xy::GetXYPlan::Response & res);
 
 private:
     costmap_2d::Costmap2DROS* costmap_ros_;

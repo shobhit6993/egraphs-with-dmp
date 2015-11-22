@@ -7,12 +7,15 @@
 #include <costmap_2d/costmap_2d_ros.h>
 #include <tf/transform_listener.h>
 #include <navigation_xy/GetXYPlan.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Twist.h>
 
 class ControlPlanner {
 public:
     void callPlanner();
     void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
     void PublishDMPPlan(const std::vector<geometry_msgs::PoseStamped> &dmp_pose);
+    void MoveRobot(const navigation_xy::GetXYPlan::Response &r);
     void ClearReqRes();
     ControlPlanner();
 

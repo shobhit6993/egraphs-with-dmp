@@ -239,7 +239,7 @@ WayPoint IntegrateForOneTimestep( const int dim_index,
     w.velocity = v;
     w.acceleration = 0.0;
     w.timestep = curr_time;
-    if (dim_index == 0) std::cout << curr_time << "\t" << x << "\t" << goal << std::endl;
+    std::cout << curr_time << "\t" << x << "\t" << goal << std::endl;
 
     return w;
 }

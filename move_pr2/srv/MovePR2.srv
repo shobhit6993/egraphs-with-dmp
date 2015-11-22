@@ -1,0 +1,4 @@
+# n dim start state.
+geometry_msgs/PoseStamped[] path
+geometry_msgs/Twist[] vel
+---

@@ -1,6 +1,6 @@
 <launch>
 
-  <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0 0 0 0 map base_link 10" />
+  <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0 0 0 0 map odom_combined 10" />
   <node name="map_server" pkg="map_server" type="map_server" args="$(find navigation_xy)/maps/empty_rectangle.pgm 0.025" />
   <node name="navigation_xy" pkg="navigation_xy" type="navigation_xy" output="screen" >
     <rosparam file="$(find navigation_xy)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />

@@ -2,6 +2,7 @@
 #include <nav_msgs/Path.h>
 #include <navigation_xy/constants.h>
 #include <fstream>
+#include <math.h>
 
 using namespace std;
 using namespace potential_field_dmp;
@@ -133,10 +134,30 @@ bool EGraphXYNode::makePlan(navigation_xy::GetXYPlan::Request& req, navigation_x
     return false;
 
   plan_pub_.publish(gui_path);  // publishes the generated plan (without DMP)
-
   egraph_vis_->visualize();
 
   return true;
+}
+
+void EGraphXYNode::SetVelocity(int i, navigation_xy::GetXYPlan::Response& res) {
+  geometry_msgs::Twist vel;
+  vel.linear.x = 0;
+  vel.linear.y = 0;
+  vel.linear.z = 0;
+  vel.angular.x = 0;
+  vel.angular.y = 0;
+  vel.angular.z = 0;
+
+  double x = res.path[i + 1].pose.position.x - res.path[i].pose.position.x;
+  double y = res.path[i + 1].pose.position.y - res.path[i].pose.position.y;
+
+  double sign_x = (x >= 0) ? 1 : -1;
+  double sign_y = (y >= 0) ? 1 : -1;
+  
+  double angle = abs(atan(y / x));
+  vel.linear.x = sign_x * kSpeed * cos(angle);
+  vel.linear.y = sign_y * kSpeed * sin(angle);
+  res.vel.push_back(vel);
 }
 
 bool EGraphXYNode::HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request& req,
@@ -154,9 +175,29 @@ bool EGraphXYNode::HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request
   new_point.pose.orientation.y = 0;
   new_point.pose.orientation.z = 0;
 
+  geometry_msgs::Twist vel;
+  vel.linear.x = 0;
+  vel.linear.y = 0;
+  vel.linear.z = 0;
+  vel.angular.x = 0;
+  vel.angular.y = 0;
+  vel.angular.z = 0;
+
   bool collision = false;
   int i = 0;
+  int v_idx = -1;
   while (i < num_points) {
+
+    if (i != num_points - 1) {
+      SetVelocity(i, res);
+      v_idx++;
+    } else {
+      vel.linear.x = 0;
+      vel.linear.y = 0;
+      res.vel.push_back(vel);
+      v_idx++;
+    }
+
     collision = false;
     for (int o = 0; o < num_obstacles; ++o) {
       if (IsInCollision(res.path[i], req.obs_x[o], req.obs_y[o], req.base_radius)) {
@@ -164,7 +205,8 @@ bool EGraphXYNode::HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request
                   << " " << res.path[i].pose.position.y
                   << "..." << req.obs_x[o] << " " << req.obs_y[o] << std::endl;
 
-        dmp_start_offset = (i - kOffset >= 0) ? i - kOffset : 0;
+        // dmp_start_offset = (i - kOffset >= 0) ? i - kOffset : 0;
+        dmp_start_offset = i;
         dmp_start = res.path[dmp_start_offset];
 
         // search for first point on egraphs path that is beyond obstacles' influence
@@ -176,17 +218,23 @@ bool EGraphXYNode::HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request
           i++;
         }
 
-        dmp_goal_offset = (i + kOffset < num_points) ? i + kOffset : num_points - 1;
+        // dmp_goal_offset = (i + kOffset < num_points) ? i + kOffset : num_points - 1;
+        dmp_goal_offset = i;
         dmp_goal = res.path[dmp_goal_offset];
 
         Plan dmp_plan;
-        if (!GenerateDMPPlan(dmp_start, dmp_goal, req.obs_x[o], req.obs_y[o], dmp_plan))
+        if (!GenerateDMPPlan(dmp_start, dmp_goal, res.vel[v_idx], req.obs_x[o], req.obs_y[o], dmp_plan))
           return false;
 
         for (int w = 0; w < dmp_plan.traj[0].waypoint.size(); ++w) {  // for each waypoint
           new_point.pose.position.x = dmp_plan.traj[0].waypoint[w].position;
           new_point.pose.position.y = dmp_plan.traj[1].waypoint[w].position;
           corrected_path.push_back(new_point);
+
+          vel.linear.x = dmp_plan.traj[0].waypoint[w].velocity;
+          vel.linear.y = dmp_plan.traj[1].waypoint[w].velocity;
+          res.vel.push_back(vel);
+          v_idx++;
         }
 
         collision = true;
@@ -210,11 +258,12 @@ bool EGraphXYNode::IsInCollision(const geometry_msgs::PoseStamped& point,
   double x_clearance = abs(point.pose.position.x - dmp_obs_x);
   double y_clearance = abs(point.pose.position.y - dmp_obs_y);
   double dist = sqrt(x_clearance * x_clearance + y_clearance * y_clearance);
-  return (dist < base_radius);
+  return (dist < 1.2 * base_radius);
 }
 
 bool EGraphXYNode::GenerateDMPPlan(const geometry_msgs::PoseStamped & dmp_start,
                                    const geometry_msgs::PoseStamped & dmp_goal,
+                                   geometry_msgs::Twist initial_vel,
                                    double dmp_obs_x,
                                    double dmp_obs_y,
                                    Plan& dmp_plan) {
@@ -237,8 +286,8 @@ bool EGraphXYNode::GenerateDMPPlan(const geometry_msgs::PoseStamped & dmp_start,
   obs_pos[0] = dmp_obs_x;
   obs_pos[1] = dmp_obs_y;
 
-  initial_velocity[0] = 0.0;
-  initial_velocity[1] = 0.0;
+  initial_velocity[0] = initial_vel.linear.x;
+  initial_velocity[1] = initial_vel.linear.y;
 
   gen_plan_srv.request.start = start;
   gen_plan_srv.request.goal = goal;

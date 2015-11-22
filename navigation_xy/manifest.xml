@@ -13,6 +13,7 @@
   <depend package="egraphs"/>
   <depend package="egraph_vis"/>
   <depend package="potential_field_dmp"/>
+  <depend package="move_pr2"/>
 
 </package>
 
