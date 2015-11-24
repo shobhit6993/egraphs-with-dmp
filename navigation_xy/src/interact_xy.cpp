@@ -73,7 +73,53 @@ void ControlPlanner::PublishDMPPlan(const std::vector<geometry_msgs::PoseStamped
   plan_pub_.publish(dmp_path);  // publishes the generated plan (with DMP)
 }
 
-void ControlPlanner::processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback) {
+// only for 1 obstacle
+void ControlPlanner::MoveObstacle() {
+  ros::Publisher marker_pub = ros::NodeHandle().advertise<visualization_msgs::Marker>("moving_obstacle", 1);
+  visualization_msgs::InteractiveMarker obs_marker;
+  server->get("obstacle " + std::to_string(0), obs_marker);
+
+  double obstacle_radius = 0.1;
+  double obstacle_height = 3.0;
+
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = "/map";
+  marker.type = visualization_msgs::Marker::CYLINDER;
+  marker.header.frame_id = "/map";
+  marker.ns = "moving_obstacle";
+  marker.scale.x = obstacle_radius;
+  marker.scale.y = obstacle_radius;
+  marker.scale.z = obstacle_height;
+  marker.color.r = 1.0;
+  marker.color.g = 1.0;
+  marker.color.b = 1.0;
+  marker.color.a = 1.0;
+  marker.id = 0;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.lifetime = ros::Duration();
+
+  geometry_msgs::PoseStamped p;
+  p.pose.position.x = obs_marker.pose.position.x;
+  p.pose.position.y = obs_marker.pose.position.y;
+  p.pose.position.z = 0;
+  p.pose.orientation.x = 0;
+  p.pose.orientation.y = 0;
+  p.pose.orientation.z = 0;
+  p.pose.orientation.w = 0;
+
+  int count = 0;
+  while (ros::ok() && count < 100)
+  {
+    marker.pose = p.pose;
+    marker_pub.publish(marker);
+    usleep(kSleep);
+    p.pose.position.x += kObsSpeed * (kSleep / 1000000.0);
+    p.pose.position.y += kObsSpeed * (kSleep / 1000000.0);
+    count++;
+  }
+}
+
+void ControlPlanner::processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr & feedback) {
   if (feedback->event_type == visualization_msgs::InteractiveMarkerFeedback::MENU_SELECT) {
     if (feedback->menu_entry_id == MenuItems::PLAN ||
         feedback->menu_entry_id == MenuItems::PLAN_AND_FEEDBACK ||
@@ -126,6 +172,7 @@ void ControlPlanner::processFeedback(const visualization_msgs::InteractiveMarker
         req.use_egraph = false;
 
       call_planner_cond.notify_one();
+      MoveObstacle();
     }
     else if (feedback->menu_entry_id == MenuItems::INTERRUPT) {
       printf("interrupt planner\n");

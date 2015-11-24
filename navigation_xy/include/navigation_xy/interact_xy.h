@@ -17,6 +17,7 @@ public:
     void PublishDMPPlan(const std::vector<geometry_msgs::PoseStamped> &dmp_pose);
     void MoveRobot(const navigation_xy::GetXYPlan::Response &r);
     void ClearReqRes();
+    void MoveObstacle();
     ControlPlanner();
 
 private:

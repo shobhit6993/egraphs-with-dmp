@@ -195,7 +195,7 @@ void CalcObstaclePos(const navigation_xy::GetXYPlan::Request& req,
                      double& obs_curr_x,
                      double& obs_curr_y) {
   obs_curr_x = obs_curr_x + kObsSpeed * (kSleep / 1000000.0);
-  obs_curr_x = obs_curr_y + kObsSpeed * (kSleep / 1000000.0);
+  obs_curr_y = obs_curr_y + kObsSpeed * (kSleep / 1000000.0);
 }
 
 void EGraphXYNode::PlotPoint(geometry_msgs::PoseStamped p) {

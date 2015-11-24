@@ -17,6 +17,6 @@ const double kParamDT = 0.1;
 const double kSpeed = 0.1;
 
 const double kRobotSpeed = 1;
-const double kObsSpeed = 1;
+const double kObsSpeed = 0.7;
 
-const int kSleep = 500 * 1000;
+const int kSleep = 200 * 1000;
