@@ -16,45 +16,49 @@
 
 class EGraphXYNode {
 public:
-    EGraphXYNode(costmap_2d::Costmap2DROS* costmap_ros);
-    bool makePlan(navigation_xy::GetXYPlan::Request& req, navigation_xy::GetXYPlan::Response& res);
+  EGraphXYNode(costmap_2d::Costmap2DROS* costmap_ros);
+  bool makePlan(navigation_xy::GetXYPlan::Request& req, navigation_xy::GetXYPlan::Response& res);
 
-    bool HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request& req,
-                               navigation_xy::GetXYPlan::Response& res);
+  bool HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request& req,
+                             navigation_xy::GetXYPlan::Response& res);
 
-    bool GenerateDMPPlan(const geometry_msgs::PoseStamped & dmp_start,
-                                       const geometry_msgs::PoseStamped & dmp_goal,
-                                       geometry_msgs::Twist initial_vel,
-                                       double dmp_obs_x,
-                                       double dmp_obs_y,
-                                       potential_field_dmp::Plan& dmp_plan);
-
-    bool SetParametersDMP();
-    bool ReadParameters();
-    bool IsInCollision(const geometry_msgs::PoseStamped & point,
+  bool GenerateDMPPlan(const geometry_msgs::PoseStamped & dmp_start,
+                       const geometry_msgs::PoseStamped & dmp_goal,
+                       geometry_msgs::Twist initial_vel,
                        double dmp_obs_x,
                        double dmp_obs_y,
-                       double base_radius);
-    void SetVelocity(int i, navigation_xy::GetXYPlan::Response & res);
+                       potential_field_dmp::Plan& dmp_plan);
 
+  bool SetParametersDMP();
+  bool ReadParameters();
+  bool IsInCollision(const geometry_msgs::PoseStamped & point,
+                     double dmp_obs_x,
+                     double dmp_obs_y,
+                     double base_radius);
+  void SetVelocity(int i, navigation_xy::GetXYPlan::Response & res);
+  void PlotPoint(geometry_msgs::PoseStamped p);
+  void PlotPoints(int s, int e, const navigation_xy::GetXYPlan::Response& res);
+  bool HandleMovingObstacles(const navigation_xy::GetXYPlan::Request& req,
+                             navigation_xy::GetXYPlan::Response& res);
 private:
-    costmap_2d::Costmap2DROS* costmap_ros_;
-    costmap_2d::Costmap2D cost_map_;
+  costmap_2d::Costmap2DROS* costmap_ros_;
+  costmap_2d::Costmap2D cost_map_;
 
-    EGraphXY* env_;
-    EGraph* egraph_;
-    EGraphEuclideanHeuristic* heur_;
-    EGraphManager<std::vector<double> >* egraph_mgr_;
-    LazyAEGPlanner<std::vector<double> >* planner_;
-    EGraphVisualizer* egraph_vis_;
+  EGraphXY* env_;
+  EGraph* egraph_;
+  EGraphEuclideanHeuristic* heur_;
+  EGraphManager<std::vector<double> >* egraph_mgr_;
+  LazyAEGPlanner<std::vector<double> >* planner_;
+  EGraphVisualizer* egraph_vis_;
 
-    ros::Publisher plan_pub_;
-    ros::ServiceServer plan_service_;
-    ros::NodeHandle nh_;
+  ros::Publisher plan_pub_;
+  ros::ServiceServer plan_service_;
+  ros::NodeHandle nh_;
 
-    ros::Subscriber interrupt_sub_;
-    void interruptPlannerCallback(std_msgs::EmptyConstPtr);
+  ros::Subscriber interrupt_sub_;
+  void interruptPlannerCallback(std_msgs::EmptyConstPtr);
 
-    std::vector<potential_field_dmp::Parameters> param_;
-    std::string dmp_mode_;
+  std::vector<potential_field_dmp::Parameters> param_;
+  std::string dmp_mode_;
+  ros::Publisher marker_pub_;
 };

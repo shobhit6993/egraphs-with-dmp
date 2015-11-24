@@ -29,7 +29,7 @@ void ControlPlanner::callPlanner() {
     EGraphStatWriter::writeStatsToFile("navigation_xy_stats.csv", first, res.stat_names, res.stat_values);
     first = false;
 
-    MoveRobot(res);
+    // MoveRobot(res);
     ClearReqRes();
   }
 }

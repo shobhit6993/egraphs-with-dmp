@@ -2,7 +2,7 @@
 #include <string>
 
 const int kNumMarkers = 1;
-const int kOffset = 7;
+const int kOffset = 30;
 const int kDOF = 2;
 
 const std::string kParametersFile = "/home/shobhit/egraphs-with-dmp/sandbox/navigation_xy/config/params.in";
@@ -14,4 +14,9 @@ const double kParamEta = 10.0;
 const double kParamP_0 = 2.0;
 const double kParamDT = 0.1;
 
-const double kSpeed = 2.0;
+const double kSpeed = 0.1;
+
+const double kRobotSpeed = 1;
+const double kObsSpeed = 1;
+
+const int kSleep = 500 * 1000;

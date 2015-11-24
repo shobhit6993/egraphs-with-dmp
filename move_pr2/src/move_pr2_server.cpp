@@ -29,7 +29,7 @@ void RobotDriver::set_cmd_vel_pub(ros::NodeHandle& n) {
 
 void RobotDriver::Move(const MovePR2::Request &req) {
     tf::TransformListener listener;
-    int n = req.vel.size();
+    int n = req.path.size();
     listener.waitForTransform("base_footprint", "map",
                               ros::Time(0), ros::Duration(1000.0));
 
