@@ -23,15 +23,26 @@ bool GenerateDMPPlanHandler(GenerateDMPPlan::Request  &req,
   if (learned_dmp.size() != req.start.size())
     return false;
 
-  GenerateTrajectory_nD(req.start,
-                        req.goal,
-                        req.initial_velocity,
-                        req.obs_pos,
-                        req.dt,
-                        req.tau,
-                        learned_dmp,
-                        req.mode,
-                        res.generated_plan);
+  if (req.mode == "moving")
+    GenerateTrajectoryMoving_nD(req.start,
+                                req.goal,
+                                req.initial_velocity,
+                                req.obs_pos,
+                                req.obs_vel,
+                                req.dt,
+                                req.tau,
+                                learned_dmp,
+                                res.generated_plan);
+  else if (req.mode == "static")
+    GenerateTrajectory_nD(req.start,
+                          req.goal,
+                          req.initial_velocity,
+                          req.obs_pos,
+                          // req.obs_vel, // ignores obs_vel
+                          req.dt,
+                          req.tau,
+                          learned_dmp,
+                          res.generated_plan);
   return true;
 }
 

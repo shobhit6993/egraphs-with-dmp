@@ -7,6 +7,8 @@
 #include <geometry_msgs/Twist.h>
 
 enum MenuItems {PLAN = 1, PLAN_AND_FEEDBACK, PLAN_WITH_EGRAPHS, PLAN_WITH_EGRAPHS_AND_FEEDBACK, INTERRUPT, WRITE_TO_FILE};
+double kObsSpeed_x = 0.3;
+double kObsSpeed_y = 0.3;
 
 void ControlPlanner::ClearReqRes() {
   req.obs_x.clear();
@@ -108,13 +110,13 @@ void ControlPlanner::MoveObstacle() {
   p.pose.orientation.w = 0;
 
   int count = 0;
-  while (ros::ok() && count < 100)
+  while (ros::ok() && count < 150)
   {
     marker.pose = p.pose;
     marker_pub.publish(marker);
     usleep(kSleep);
-    p.pose.position.x += kObsSpeed * (kSleep / 1000000.0);
-    p.pose.position.y += kObsSpeed * (kSleep / 1000000.0);
+    p.pose.position.x += kObsSpeed_x * (kSleep / 1000000.0);
+    p.pose.position.y += kObsSpeed_y * (kSleep / 1000000.0);
     count++;
   }
 }
@@ -272,6 +274,12 @@ ControlPlanner::ControlPlanner() {
   fprintf(fout, "experiments:\n\n");
   fclose(fout);
   test_num = 0;
+
+  ros::NodeHandle private_nh("~");
+  private_nh.param<double>("obstacle_speed_x", kObsSpeed_x, 0.3);
+  private_nh.param<double>("obstacle_speed_y", kObsSpeed_y, 0.3);
+  std::cout << kObsSpeed_x << std::endl;
+  std::cout << kObsSpeed_y << std::endl;
 
   plan_pub_ = ros::NodeHandle().advertise<nav_msgs::Path>("plan_with_dmp", 1);
 
@@ -434,7 +442,7 @@ ControlPlanner::ControlPlanner() {
 }
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "interact_xy_planner");
+  ros::init(argc, argv, "interact_xy");
 
   ControlPlanner cp;
 

@@ -19,7 +19,7 @@ public:
   EGraphXYNode(costmap_2d::Costmap2DROS* costmap_ros);
   bool makePlan(navigation_xy::GetXYPlan::Request& req, navigation_xy::GetXYPlan::Response& res);
 
-  bool HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request& req,
+  bool HandleStaticObstacles(const navigation_xy::GetXYPlan::Request& req,
                              navigation_xy::GetXYPlan::Response& res);
 
   bool GenerateDMPPlan(const geometry_msgs::PoseStamped & dmp_start,
@@ -27,7 +27,9 @@ public:
                        geometry_msgs::Twist initial_vel,
                        double dmp_obs_x,
                        double dmp_obs_y,
-                       potential_field_dmp::Plan& dmp_plan);
+                       double obs_vel_x,
+                       double obs_vel_y,
+                       potential_field_dmp::Plan & dmp_plan);
 
   bool SetParametersDMP();
   bool ReadParameters();
@@ -37,9 +39,9 @@ public:
                      double base_radius);
   void SetVelocity(int i, navigation_xy::GetXYPlan::Response & res);
   void PlotPoint(geometry_msgs::PoseStamped p);
-  void PlotPoints(int s, int e, const navigation_xy::GetXYPlan::Response& res);
-  bool HandleMovingObstacles(const navigation_xy::GetXYPlan::Request& req,
-                             navigation_xy::GetXYPlan::Response& res);
+  void PlotPoints(int s, int e, const navigation_xy::GetXYPlan::Response & res);
+  bool HandleMovingObstacles(const navigation_xy::GetXYPlan::Request & req,
+                             navigation_xy::GetXYPlan::Response & res);
 private:
   costmap_2d::Costmap2DROS* costmap_ros_;
   costmap_2d::Costmap2D cost_map_;

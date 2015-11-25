@@ -7,8 +7,11 @@ float64[] initial_velocity
 # n dim goal state.
 float64[] goal
 
-# n dim obstacle position.
+# n dim obstacle position (initial position in case of moving obstacle)
 float64[] obs_pos
+
+#n dim obstacle velocity (should be set to zero for static obstacles)
+float64[] obs_vel
 
 # Speed of replay.
 float64 tau

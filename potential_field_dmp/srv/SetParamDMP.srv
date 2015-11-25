@@ -1,4 +1,5 @@
-# k,d,tau,eta,p_0 values for each DOF
+# k,d,tau,eta,p_0 values for each DOF for static obstacle case
+# k,d,tau,lambda,beta value for each DOP for moving obstacle case
 
 potential_field_dmp/Parameters[] param
 

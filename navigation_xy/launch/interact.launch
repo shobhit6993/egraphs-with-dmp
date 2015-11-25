@@ -2,5 +2,7 @@
   <node name="interact_xy" pkg="navigation_xy" type="interact_xy" output="screen" >
     <rosparam file="$(find navigation_xy)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
     <rosparam file="$(find navigation_xy)/config/global_costmap_params.yaml" command="load" />
+    <param name="obstacle_speed_x" value="0.3" type="double" />
+    <param name="obstacle_speed_y" value="0" type="double"/>
   </node>
 </launch>

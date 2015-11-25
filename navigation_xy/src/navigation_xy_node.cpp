@@ -9,10 +9,19 @@ using namespace std;
 using namespace potential_field_dmp;
 
 int m_id = 0; //marker_id
+double kRobotSpeed = 1;
+double kObsSpeed_x = 0.3;
+double kObsSpeed_y = 0.3;
 
 EGraphXYNode::EGraphXYNode(costmap_2d::Costmap2DROS* costmap_ros) {
   // ros::NodeHandle nh_;
   ros::NodeHandle private_nh("~");
+  private_nh.param<double>("robot_speed", kRobotSpeed, 1.0);
+  private_nh.param<double>("obstacle_speed_x", kObsSpeed_x, 0.3);
+  private_nh.param<double>("obstacle_speed_y", kObsSpeed_y, 0.3);
+  std::cout << kRobotSpeed << std::endl;
+  std::cout << kObsSpeed_x << std::endl;
+  std::cout << kObsSpeed_y << std::endl;
 
   if (!SetParametersDMP())
     return;
@@ -133,8 +142,14 @@ bool EGraphXYNode::makePlan(navigation_xy::GetXYPlan::Request& req, navigation_x
     res.path.push_back(p);
   }
 
-  if (!HandleMovingObstacles(req, res))
-    return false;
+  if (dmp_mode_ == "static") {
+    if (!HandleStaticObstacles(req, res))
+      return false;
+  } else if (dmp_mode_ == "moving") {
+    if (!HandleMovingObstacles(req, res))
+      return false;
+  }
+
 
   plan_pub_.publish(gui_path);  // publishes the generated plan (without DMP)
   egraph_vis_->visualize();
@@ -174,7 +189,7 @@ void UpdateSE(const navigation_xy::GetXYPlan::Response& res,
               double target_dist,
               int& s,
               int& e,
-              std::vector <geometry_msgs::PoseStamped> corrected_path) {
+              std::vector <geometry_msgs::PoseStamped>& corrected_path) {
   int n = res.path.size();
   int i = e;
   double dist_travelled = CalcDistance(i, i + 1, res);
@@ -194,57 +209,36 @@ void UpdateSE(const navigation_xy::GetXYPlan::Response& res,
 void CalcObstaclePos(const navigation_xy::GetXYPlan::Request& req,
                      double& obs_curr_x,
                      double& obs_curr_y) {
-  obs_curr_x = obs_curr_x + kObsSpeed * (kSleep / 1000000.0);
-  obs_curr_y = obs_curr_y + kObsSpeed * (kSleep / 1000000.0);
+  obs_curr_x = obs_curr_x + kObsSpeed_x  * (kSleep / 1000000.0);
+  obs_curr_y = obs_curr_y + kObsSpeed_y * (kSleep / 1000000.0);
 }
 
 void EGraphXYNode::PlotPoint(geometry_msgs::PoseStamped p) {
   // std::cout << m_id << std::endl;
-  // Set our initial shape type to be a cube
   uint32_t shape = visualization_msgs::Marker::SPHERE;
 
   visualization_msgs::Marker marker;
-
-  // geometry_msgs::PoseStamped w = ar_m.pose;
-
-  // Set the frame ID and timestamp.  See the TF tutorials for information on these.
   marker.header.frame_id = "/map";
-  // marker.header.stamp = ar_m.header.stamp;
-
-  // Set the namespace and id for this marker.  This serves to create a unique ID
-  // Any marker sent with the same namespace and id will overwrite the old one
   marker.ns = "dynamic_marker";
   marker.id = m_id;
   m_id++;
 
-  // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
   marker.type = shape;
-
-  // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
   marker.action = visualization_msgs::Marker::ADD;
-
-  // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
   marker.pose = p.pose;
-
-  // Set the scale of the marker -- 1x1x1 here means 1m on a side
   marker.scale.x = 0.03;
   marker.scale.y = 0.03;
   marker.scale.z = 0.03;
 
-  // Set the color -- be sure to set alpha to something non-zero!
   marker.color.b = 1.0f;
   marker.color.g = 0.0f;
   marker.color.r = 0.0f;
   marker.color.a = 1.0;
-
   marker.lifetime = ros::Duration();
 
   ros::Rate loop_rate(30);
-  // while (ros::ok())
-  // {
   marker_pub_.publish(marker);
   loop_rate.sleep();
-  // }
 }
 
 void EGraphXYNode::PlotPoints(int s, int e, const navigation_xy::GetXYPlan::Response & res) {
@@ -283,7 +277,24 @@ bool EGraphXYNode::HandleMovingObstacles(const navigation_xy::GetXYPlan::Request
       dmp_start_offset = e;
       dmp_start = res.path[dmp_start_offset];
 
-      dmp_goal_offset = (e + kOffset < num_points) ? e + kOffset : num_points - 1;
+      // [ code block for aniticipating appropriate goal position
+      int e_temp = e + 1;
+      {
+        double obs_curr_x_temp = obs_curr_x;
+        double obs_curr_y_temp = obs_curr_y;
+        int s_temp;
+        std::vector <geometry_msgs::PoseStamped> garbage;
+
+        while (e_temp < num_points - 1 &&
+               IsInCollision(res.path[e_temp], obs_curr_x_temp, obs_curr_y_temp, req.base_radius)) {
+          UpdateSE(res, target_dist, s_temp, e_temp, garbage);
+          CalcObstaclePos(req, obs_curr_x_temp, obs_curr_y_temp);
+        }
+
+        e_temp = min(e_temp, num_points - 1);
+      }
+      // ]
+      dmp_goal_offset = e_temp;
       dmp_goal = res.path[dmp_goal_offset];
       e = dmp_goal_offset;
 
@@ -295,14 +306,23 @@ bool EGraphXYNode::HandleMovingObstacles(const navigation_xy::GetXYPlan::Request
       vel.angular.x = 0;
       vel.angular.y = 0;
       vel.angular.z = 0;
-      if (!GenerateDMPPlan(dmp_start, dmp_goal, vel, obs_curr_x, obs_curr_y, dmp_plan))
+      if (!GenerateDMPPlan(dmp_start, dmp_goal,
+                           vel, obs_curr_x, obs_curr_y,
+                           kObsSpeed_x, kObsSpeed_y, dmp_plan)) {
         return false;
+      }
 
       for (int w = 0; w < dmp_plan.traj[0].waypoint.size(); ++w) {  // for each waypoint
         new_point.pose.position.x = dmp_plan.traj[0].waypoint[w].position;
         new_point.pose.position.y = dmp_plan.traj[1].waypoint[w].position;
-        PlotPoint(new_point);
         corrected_path.push_back(new_point);
+
+        double distance = sqrt(pow(dmp_plan.traj[0].waypoint[w].position, 2)
+                               + pow(dmp_plan.traj[1].waypoint[w].position, 2));
+        double speed = sqrt(pow(dmp_plan.traj[0].waypoint[w].velocity, 2)
+                            + pow(dmp_plan.traj[1].waypoint[w].velocity, 2));
+        usleep(kSleep);
+        PlotPoint(new_point);
       }
     }
   }
@@ -310,7 +330,7 @@ bool EGraphXYNode::HandleMovingObstacles(const navigation_xy::GetXYPlan::Request
   return true;
 }
 
-bool EGraphXYNode::HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request & req,
+bool EGraphXYNode::HandleStaticObstacles(const navigation_xy::GetXYPlan::Request & req,
     navigation_xy::GetXYPlan::Response & res) {
   int num_obstacles = req.obs_x.size();
   int num_points = res.path.size();
@@ -371,8 +391,11 @@ bool EGraphXYNode::HandleOnlineObstacles(const navigation_xy::GetXYPlan::Request
         dmp_goal = res.path[dmp_goal_offset];
 
         Plan dmp_plan;
-        if (!GenerateDMPPlan(dmp_start, dmp_goal, res.vel[v_idx], req.obs_x[o], req.obs_y[o], dmp_plan))
+        if (!GenerateDMPPlan(dmp_start, dmp_goal,
+                             res.vel[v_idx], req.obs_x[o], req.obs_y[o],
+                             kObsSpeed_x, kObsSpeed_y, dmp_plan)) {
           return false;
+        }
 
         for (int w = 0; w < dmp_plan.traj[0].waypoint.size(); ++w) {  // for each waypoint
           new_point.pose.position.x = dmp_plan.traj[0].waypoint[w].position;
@@ -414,6 +437,8 @@ bool EGraphXYNode::GenerateDMPPlan(const geometry_msgs::PoseStamped & dmp_start,
                                    geometry_msgs::Twist initial_vel,
                                    double dmp_obs_x,
                                    double dmp_obs_y,
+                                   double obs_vel_x,
+                                   double obs_vel_y,
                                    Plan & dmp_plan) {
 
   ros::ServiceClient gen_dmp_plan_client =
@@ -423,6 +448,7 @@ bool EGraphXYNode::GenerateDMPPlan(const geometry_msgs::PoseStamped & dmp_start,
   std::vector<double> start(kDOF);
   std::vector<double> goal(kDOF);
   std::vector<double> obs_pos(kDOF);
+  std::vector<double> obs_vel(kDOF);
   std::vector<double> initial_velocity(kDOF);
 
   start[0] = dmp_start.pose.position.x;
@@ -434,12 +460,16 @@ bool EGraphXYNode::GenerateDMPPlan(const geometry_msgs::PoseStamped & dmp_start,
   obs_pos[0] = dmp_obs_x;
   obs_pos[1] = dmp_obs_y;
 
+  obs_vel[0] = obs_vel_x;
+  obs_vel[1] = obs_vel_y;
+
   initial_velocity[0] = initial_vel.linear.x;
   initial_velocity[1] = initial_vel.linear.y;
 
   gen_plan_srv.request.start = start;
   gen_plan_srv.request.goal = goal;
   gen_plan_srv.request.obs_pos = obs_pos;
+  gen_plan_srv.request.obs_vel = obs_vel;
   gen_plan_srv.request.initial_velocity = initial_velocity;
   gen_plan_srv.request.tau = kParamTau;
   gen_plan_srv.request.dt = kParamDT;
@@ -490,6 +520,8 @@ bool EGraphXYNode::ReadParameters() {
       fin >> param_[i].tau;
       fin >> param_[i].eta;
       fin >> param_[i].p_0;
+      fin >> param_[i].lambda;
+      fin >> param_[i].beta;
     }
     fin >> dmp_mode_;
     fin.close();
@@ -502,7 +534,7 @@ bool EGraphXYNode::ReadParameters() {
 }
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "navigation_xy_node");
+  ros::init(argc, argv, "navigation_xy");
 
   tf::TransformListener tf_;
   costmap_2d::Costmap2DROS* costmap = new costmap_2d::Costmap2DROS("global_costmap", tf_);
